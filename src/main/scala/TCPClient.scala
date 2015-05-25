@@ -15,8 +15,11 @@ import scala.language.postfixOps
  */
 object TCPClientApp extends App {
   val customConf = ConfigFactory.parseString("""
-akka.log-dead-letters = 0
-akka.loglevel = DEBUG
+akka {
+   event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
+   log-dead-letters = 0
+   loglevel = DEBUG
+}
 """)
   val host = if (args.size > 0) args(0) else "localhost"
   val port = if (args.size > 1) Integer.parseInt(args(1)) else 4200

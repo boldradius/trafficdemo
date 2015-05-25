@@ -9,9 +9,11 @@ import com.typesafe.config.ConfigFactory
 
 object TCPServerApp extends App {
     val customConf = ConfigFactory.parseString("""
-akka.log-dead-letters = 0
-akka.loglevel = DEBUG
-""")
+akka {
+   event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
+   log-dead-letters = 0
+   loglevel = DEBUG
+}""")
 
   val system = ActorSystem("server", ConfigFactory.load(customConf))
   system.actorOf(Props[TCPServer])
