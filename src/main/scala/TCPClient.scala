@@ -5,6 +5,7 @@ import akka.io.Tcp._
 import akka.io.{IO, Tcp}
 import akka.routing.{ActorRefRoutee, RoundRobinRoutingLogic, Router}
 import akka.util.ByteString
+import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -13,10 +14,13 @@ import scala.language.postfixOps
  * Main program
  */
 object TCPClientApp extends App {
+  val customConf = ConfigFactory.parseString("""
+akka.log-dead-letters = 0
+""")
   val host = if (args.size > 0) args(0) else "localhost"
   val port = if (args.size > 1) Integer.parseInt(args(1)) else 4200
   val numClients = if (args.size > 2) Integer.parseInt(args(2)) else 1
-  val clientManager: ActorRef = ActorSystem().actorOf(Props(classOf[TCPClientManager], new InetSocketAddress(host, port), numClients))
+  val clientManager: ActorRef = ActorSystem("test", ConfigFactory.load(customConf)).actorOf(Props(classOf[TCPClientManager], new InetSocketAddress(host, port), numClients))
   clientManager ! StartSession
 }
 
