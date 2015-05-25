@@ -5,9 +5,15 @@ import akka.io.{IO, Tcp}
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.typesafe.config.ConfigFactory
 
 object TCPServerApp extends App {
-  val system = ActorSystem()
+    val customConf = ConfigFactory.parseString("""
+akka.log-dead-letters = 0
+akka.loglevel = DEBUG
+""")
+
+  val system = ActorSystem("server", ConfigFactory.load(customConf))
   system.actorOf(Props[TCPServer])
 }
 

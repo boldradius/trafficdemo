@@ -16,11 +16,13 @@ import scala.language.postfixOps
 object TCPClientApp extends App {
   val customConf = ConfigFactory.parseString("""
 akka.log-dead-letters = 0
+akka.loglevel = DEBUG
 """)
   val host = if (args.size > 0) args(0) else "localhost"
   val port = if (args.size > 1) Integer.parseInt(args(1)) else 4200
   val numClients = if (args.size > 2) Integer.parseInt(args(2)) else 1
-  val clientManager: ActorRef = ActorSystem("test", ConfigFactory.load(customConf)).actorOf(Props(classOf[TCPClientManager], new InetSocketAddress(host, port), numClients))
+  val clientManager: ActorRef = ActorSystem("test", ConfigFactory.load(customConf))
+    .actorOf(Props(classOf[TCPClientManager], new InetSocketAddress(host, port), numClients))
   clientManager ! StartSession
 }
 
@@ -34,7 +36,6 @@ object SessionConfig {
 
 /**
  * Clients manager actor.
- *
  */
 class TCPClientManager(remoteAddr: InetSocketAddress, numClients: Int) extends Actor with ActorLogging {
   import context.dispatcher
@@ -54,11 +55,13 @@ class TCPClientManager(remoteAddr: InetSocketAddress, numClients: Int) extends A
 
   def receive = {
     case StartSession =>
+      log.info("Session starting")
       statistics ! Reset
       router.routees.foreach(_.send(InitConnection, self))
       context.system.scheduler.scheduleOnce(SessionConfig.SESSION_DURATION, self, EndSession)
 
     case EndSession =>
+      log.info("Session ending")
       router.routees.foreach(_.send(CloseConnection, self))
       context.system.scheduler.scheduleOnce(SessionConfig.PAUSE_DURATION, self, StartSession)
 
@@ -82,6 +85,7 @@ class TCPClient(remoteAddr: InetSocketAddress, numClients: Int, statistics: Acto
   def receive = {
     case InitConnection =>
       IO(Tcp) ! Connect(remoteAddr)
+      log.debug("Connection initialized")
 
     case CommandFailed(_: Connect) =>
       statistics ! RegisterConnectionFailure
@@ -107,6 +111,7 @@ class TCPClient(remoteAddr: InetSocketAddress, numClients: Int, statistics: Acto
           connection ! Close
         case _: ConnectionClosed =>
           if (requestResponseBalance > 0) statistics ! ReportLostResponses(requestResponseBalance)
+          log.debug("Connection closed")
           tickScheduler.cancel()
           context.unbecome()
       }
