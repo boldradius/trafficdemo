@@ -16,7 +16,7 @@ import scala.language.postfixOps
 object TCPClientApp extends App {
   val customConf = ConfigFactory.parseString("""
 akka {
-   event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
+   loggers = ["akka.event.slf4j.Slf4jLogger"]
    log-dead-letters = 0
    loglevel = DEBUG
 }

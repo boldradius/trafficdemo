@@ -10,8 +10,9 @@ import com.typesafe.config.ConfigFactory
 object TCPServerApp extends App {
     val customConf = ConfigFactory.parseString("""
 akka {
-   event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
-   log-dead-letters = 0
+
+   loggers = ["akka.event.slf4j.Slf4jLogger"]
+   log-dead-letters = off
    loglevel = DEBUG
 }""")
 
