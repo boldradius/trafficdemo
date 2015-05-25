@@ -11,8 +11,8 @@
       <pattern>%date{ISO8601} %-5level %logger{36} %X{akkaSource} - %msg%n</pattern>
     </encoder>
   </appender>
-  <root level="debug">
-    <!-- <appender-ref ref="STDOUT"/> -->
+  <root level="INFO">
+    <appender-ref ref="STDOUT"/>
     <appender-ref ref="FILE"/>
   </root>
 </configuration>

@@ -84,7 +84,6 @@ class TCPClient(remoteAddr: InetSocketAddress, numClients: Int, statistics: Acto
 
   private var requestResponseBalance = 0
 
-
   def receive = {
     case InitConnection =>
       IO(Tcp) ! Connect(remoteAddr)
@@ -94,7 +93,6 @@ class TCPClient(remoteAddr: InetSocketAddress, numClients: Int, statistics: Acto
       statistics ! RegisterConnectionFailure
 
     case c@Connected(remote, local) =>
-
       val connection = sender()
       connection ! Register(self)
 
@@ -114,7 +112,6 @@ class TCPClient(remoteAddr: InetSocketAddress, numClients: Int, statistics: Acto
           connection ! Close
         case _: ConnectionClosed =>
           if (requestResponseBalance > 0) statistics ! ReportLostResponses(requestResponseBalance)
-          log.debug("Connection closed")
           tickScheduler.cancel()
           context.unbecome()
       }

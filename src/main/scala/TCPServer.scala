@@ -10,7 +10,6 @@ import com.typesafe.config.ConfigFactory
 object TCPServerApp extends App {
     val customConf = ConfigFactory.parseString("""
 akka {
-
    loggers = ["akka.event.slf4j.Slf4jLogger"]
    log-dead-letters = off
    loglevel = DEBUG
@@ -23,6 +22,7 @@ akka {
 class TCPServer extends Actor with ActorLogging {
   var activeConnections = 0
   var processedRequests = 0
+  var startTime = 0L
 
   import akka.io.Tcp._
   import context.system
@@ -44,6 +44,7 @@ class TCPServer extends Actor with ActorLogging {
   def receive = {
     case b @ Bound(addr) =>
       log.info("Bound To Port '{}' on address '{}'", TCPPort, addr)
+      startTime = System.currentTimeMillis()
 
     case CommandFailed(_: Bind) =>
       log.error("Binding Command Failed. Exiting.")
@@ -57,7 +58,10 @@ class TCPServer extends Actor with ActorLogging {
 
     case Processed => processedRequests += 1
     case ClosedConnection => activeConnections -= 1
-    case PrintStatistics => log.info(s"active connections: ${activeConnections}  |  processed requests: ${processedRequests}")
+    case PrintStatistics =>
+      val elapsed = (System.currentTimeMillis() - startTime) / 1000f
+      val rate: Float = processedRequests.toFloat / elapsed.toFloat
+      log.info(s"active connections: ${activeConnections}  |  processed requests: ${processedRequests} | ${elapsed}s | ${rate} req/sec")
   }
 
 }
