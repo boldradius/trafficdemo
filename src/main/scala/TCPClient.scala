@@ -13,9 +13,9 @@ import scala.language.postfixOps
  * Main program
  */
 object TCPClientApp extends App {
-  val host = args(0)
-  val port = Integer.parseInt(args(1))
-  val numClients = Integer.parseInt(args(2))
+  val host = if (args.size > 0) args(0) else "localhost"
+  val port = if (args.size > 1) Integer.parseInt(args(1)) else 4200
+  val numClients = if (args.size > 2) Integer.parseInt(args(2)) else 1
   val clientManager: ActorRef = ActorSystem().actorOf(Props(classOf[TCPClientManager], new InetSocketAddress(host, port), numClients))
   clientManager ! StartSession
 }
