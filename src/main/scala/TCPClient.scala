@@ -86,6 +86,7 @@ class TCPClient(remoteAddr: InetSocketAddress, numClients: Int, statistics: Acto
 
     case CommandFailed(_: Connect) =>
       statistics ! RegisterConnectionFailure
+      context.system.scheduler.scheduleOnce(3 seconds, self, InitConnection)
 
     case c@Connected(remote, local) =>
       val connection = sender()
