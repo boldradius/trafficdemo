@@ -92,6 +92,7 @@ class TCPClient(remoteAddr: InetSocketAddress, numClients: Int, statistics: Acto
       connection ! Register(self)
       statistics ! RegisterConnection
 
+      requestResponseBalance = 0
       val tickScheduler = context.system.scheduler.schedule(0 seconds, 1 second, self, Tick)
 
       context become {
