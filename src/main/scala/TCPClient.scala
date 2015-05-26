@@ -67,9 +67,11 @@ class TCPClientManager(remoteAddr: InetSocketAddress, numClients: Int) extends A
       log.info("Session ending")
       router.routees.foreach(_.send(CloseConnection, self))
       context.system.scheduler.scheduleOnce(SessionConfig.PAUSE_DURATION, self, StartSession)
+      statistics ! WriteLog
 
     case RestartSession =>
       statistics ! WriteLog
+      statistics ! Reset
       self ! StartSession
   }
 }
@@ -104,6 +106,7 @@ class TCPClient(remoteAddr: InetSocketAddress, numClients: Int, statistics: Acto
         case Tick =>
           connection ! Write(ByteString("echo"))
           requestResponseBalance = requestResponseBalance + 1
+          statistics ! RegisterConnection
         case CommandFailed(w: Write) =>
           statistics ! RegisterWriteFailure
         case Received(data) =>
@@ -111,7 +114,7 @@ class TCPClient(remoteAddr: InetSocketAddress, numClients: Int, statistics: Acto
         case CloseConnection =>
           connection ! Close
         case _: ConnectionClosed =>
-          if (requestResponseBalance > 0) statistics ! ReportLostResponses(requestResponseBalance)
+          if (requestResponseBalance > 1) statistics ! ReportLostResponses(requestResponseBalance)
           tickScheduler.cancel()
           context.unbecome()
       }
