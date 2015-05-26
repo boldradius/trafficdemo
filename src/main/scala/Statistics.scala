@@ -12,7 +12,7 @@ class Statistics(expectedNumberOfConnections: Int) extends Actor with ActorLoggi
   private var connectionEvents = 0
   private var connectionFailures = 0
   private var connectionsTime = -1.0
-  private var writeFailures = -1.0
+  private var writeFailures = 0
   private var startTime = System.currentTimeMillis()
   private var lostResponses = 0
 

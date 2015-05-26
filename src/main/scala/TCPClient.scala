@@ -23,7 +23,7 @@ akka {
 """)
   val host = if (args.size > 0) args(0) else "localhost"
   val port = if (args.size > 1) Integer.parseInt(args(1)) else 4200
-  val numClients = if (args.size > 2) Integer.parseInt(args(2)) else 1
+  val numClients = if (args.size > 2) Integer.parseInt(args(2)) else 100
   val clientManager: ActorRef = ActorSystem("test", ConfigFactory.load(customConf))
     .actorOf(Props(classOf[TCPClientManager], new InetSocketAddress(host, port), numClients))
   clientManager ! StartSession
@@ -33,8 +33,8 @@ akka {
  * Settings
  */
 object SessionConfig {
-  val SESSION_DURATION = 30 seconds
-  val PAUSE_DURATION = 10 seconds
+  val SESSION_DURATION = 30 minutes
+  val PAUSE_DURATION = 30 seconds
 }
 
 /**
@@ -44,11 +44,6 @@ class TCPClientManager(remoteAddr: InetSocketAddress, numClients: Int) extends A
   import context.dispatcher
 
   val statistics = context.actorOf(Statistics.props(numClients))
-
-  @throws[Exception](classOf[Exception])
-  override def preStart(): Unit = {
-    self ! StartSession
-  }
 
   val router = Router(RoundRobinRoutingLogic(), Vector.fill(numClients) {
     val r = context.actorOf(Props(classOf[TCPClient], remoteAddr, numClients, statistics))
@@ -66,12 +61,10 @@ class TCPClientManager(remoteAddr: InetSocketAddress, numClients: Int) extends A
     case EndSession =>
       log.info("Session ending")
       router.routees.foreach(_.send(CloseConnection, self))
-      context.system.scheduler.scheduleOnce(SessionConfig.PAUSE_DURATION, self, StartSession)
-      statistics ! WriteLog
+      context.system.scheduler.scheduleOnce(SessionConfig.PAUSE_DURATION, self, RestartSession)
 
     case RestartSession =>
       statistics ! WriteLog
-      statistics ! Reset
       self ! StartSession
   }
 }
@@ -97,6 +90,7 @@ class TCPClient(remoteAddr: InetSocketAddress, numClients: Int, statistics: Acto
     case c@Connected(remote, local) =>
       val connection = sender()
       connection ! Register(self)
+      statistics ! RegisterConnection
 
       val tickScheduler = context.system.scheduler.schedule(0 seconds, 1 second, self, Tick)
 
@@ -106,16 +100,14 @@ class TCPClient(remoteAddr: InetSocketAddress, numClients: Int, statistics: Acto
         case Tick =>
           connection ! Write(ByteString("echo"))
           requestResponseBalance = requestResponseBalance + 1
-          statistics ! RegisterConnection
         case CommandFailed(w: Write) =>
           statistics ! RegisterWriteFailure
         case Received(data) =>
           requestResponseBalance = requestResponseBalance - 1
         case CloseConnection =>
           connection ! Close
-        case _: ConnectionClosed =>
-          if (requestResponseBalance > 1) statistics ! ReportLostResponses(requestResponseBalance)
           tickScheduler.cancel()
+          if (requestResponseBalance > 1) statistics ! ReportLostResponses(requestResponseBalance)
           context.unbecome()
       }
   }

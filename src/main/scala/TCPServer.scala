@@ -21,8 +21,9 @@ akka {
 
 class TCPServer extends Actor with ActorLogging {
   var activeConnections = 0
-  var processedRequests = 0
-  var startTime = 0L
+  var totalProcessedRequests = 0
+  var currentThreshold = 0
+  var thresholdStartTime = System.currentTimeMillis()
 
   import akka.io.Tcp._
   import context.system
@@ -44,7 +45,6 @@ class TCPServer extends Actor with ActorLogging {
   def receive = {
     case b @ Bound(addr) =>
       log.info("Bound To Port '{}' on address '{}'", TCPPort, addr)
-      startTime = System.currentTimeMillis()
 
     case CommandFailed(_: Bind) =>
       log.error("Binding Command Failed. Exiting.")
@@ -56,12 +56,20 @@ class TCPServer extends Actor with ActorLogging {
       val connection = sender()
       connection ! Register(handler)
 
-    case Processed => processedRequests += 1
-    case ClosedConnection => activeConnections -= 1
+    case Processed =>
+      totalProcessedRequests += 1
+      currentThreshold += 1
+
+    case ClosedConnection =>
+      activeConnections -= 1
+
     case PrintStatistics =>
-      val elapsed = (System.currentTimeMillis() - startTime) / 1000f
-      val rate: Float = processedRequests.toFloat / elapsed.toFloat
-      log.info(s"active connections: ${activeConnections}  |  processed requests: ${processedRequests} | ${elapsed}s | ${rate} req/sec")
+      val elapsed = (System.currentTimeMillis() - thresholdStartTime) / 1000f
+      val rate: Float = currentThreshold.toFloat / elapsed.toFloat
+
+      log.info(s"active connections: ${activeConnections}  | processed requests: ${currentThreshold} | ${elapsed}s | ${rate} req/sec")
+      currentThreshold = 0
+      thresholdStartTime = System.currentTimeMillis()
   }
 
 }
